@@ -30,12 +30,15 @@ getP p off prog = A $ fromJust $ M.lookup (addP p off) prog
 
 put :: Addr -> Int -> Prog -> Prog
 put p v prog = M.insert p v prog
-  
-run :: [Int] -> (Int, Int) -> Int
-run listing (noun, verb) = 
+
+mkProgram :: [Int] -> Prog
+mkProgram listing = 
   let addressSpace = fmap A [0..]
-      prog = M.fromList (zip addressSpace listing)
-      prog1 = put (A 1) noun prog
+  in M.fromList (zip addressSpace listing)
+  
+run :: Prog -> (Int, Int) -> Int
+run prog (noun, verb) = 
+  let prog1 = put (A 1) noun prog
       prog2 = put (A 2) verb prog1
   in runProg (A 0) prog2
   
@@ -59,17 +62,18 @@ exec op p1 p2 pr prog =
             else m * n
   in put pr val prog
   
-makeOutput :: Int -> [Int] -> Int
-makeOutput out listing = 
+makeOutput :: Int -> Prog -> Int
+makeOutput out prog = 
    let pairs = (,) <$> [0..99] <*> [0..99]
-       outputs = zip (fmap (run listing) pairs) pairs
+       outputs = zip (fmap (run prog) pairs) pairs
        (noun, verb) = fromJust $ Prelude.lookup out outputs
    in 100 * noun + verb 
   
 main = do
   text <- readFile "Data2"
   let listing = fmap readInt $ splitOn "," text
-  print $ run listing (12, 2)
-  print $ makeOutput 19690720 listing
+  let prog = mkProgram listing
+  print $ run prog (12, 2)
+  print $ makeOutput 19690720 prog
   
 test = [1,9,10,3,2,3,11,0,99,30,40,50]
