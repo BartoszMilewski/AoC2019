@@ -70,7 +70,7 @@ makeOutput out prog =
    in 100 * noun + verb 
   
 main = do
-  text <- readFile "Data2"
+  text <- readFile "Data2.txt"
   let listing = fmap readInt $ splitOn "," text
   let prog = mkProgram listing
   print $ run prog (12, 2)
