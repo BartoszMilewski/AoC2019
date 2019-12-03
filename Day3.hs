@@ -46,12 +46,11 @@ addSeg seg (Segs vert hor) =
     'L' -> Segs vert (seg : hor)
     'R' -> Segs vert (seg : hor)
 
--- In: the move,
 -- start position, 
 -- number of grid steps so far, 
 -- cumulative vertical and horizontal segment lists
-move :: Move -> (Pos, Steps, Segments) -> (Pos, Steps, Segments)
-move (M dir dist) ((x, y), steps, segs)  =
+move :: (Pos, Steps, Segments) -> Move -> (Pos, Steps, Segments)
+move ((x, y), steps, segs) (M dir dist) =
    let steps' = steps + dist
        seg' = S min max other dir steps
    in (pos', steps', addSeg seg' segs)
@@ -100,12 +99,9 @@ main = do
   --let l2 = test2
   let moves1 = fmap readMv $ splitOn "," l1
   let moves2 = fmap readMv $ splitOn "," l2
-  -- path is a list of transformations
-  let path1 = fmap move $ reverse moves1
-  let path2 = fmap move $ reverse moves2
-  -- apply these transformations to initial state
-  let (_, _, segs1) = foldl (.) id path1 $ ((0, 0), 0, (Segs [] []))
-  let (_, _, segs2) = foldl (.) id path2 $ ((0, 0), 0, (Segs [] []))
+  
+  let (_, _, segs1) = foldl move ((0, 0), 0, (Segs [] [])) moves1
+  let (_, _, segs2) = foldl move ((0, 0), 0, (Segs [] [])) moves2
   -- we have lists of vertical/horizontal segments for each wire
   -- cross them all accordingly
   let cs = crosses (vert segs1) (hor segs2) 
