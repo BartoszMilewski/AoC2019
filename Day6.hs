@@ -47,12 +47,11 @@ mkNode (key, pool) =
 
 orbits :: Algebra TreeF (Int, Int) 
 orbits (NodeF _ lst) = 
-  let childCount = sum $ fmap ((+1) . fst) lst
-      orbitCount = sum $ fmap snd lst
-  in (childCount, orbitCount + childCount)
+    (childCount, orbitCount + childCount)
+  where childCount = sum $ fmap ((+1) . fst) lst
+        orbitCount = sum $ fmap snd lst
  
 
---allOrbits pool = snd $ hylo orbits mkNode ("COM", pool)
 allOrbits = snd . hylo orbits mkNode . ("COM", )
 
 -- Part II
@@ -68,34 +67,32 @@ data Accum = Acc { seenMe :: Bool
 -- Combine info gathered from children
 
 meAndSanta :: Algebra TreeF Accum
-meAndSanta (NodeF name accums) = 
-    if name == "YOU" || name == "SAN"
-    then
-      if name == "YOU"
-      then if hasSanta accums
-           then Acc True  True (distToSa accums)
-           else Acc True  False 0
-      else if hasMe accums
-           then Acc True  True (distToMe accums)
-           else Acc False True 0
-    else -- current node is neither me nor santa. 
-         -- Maybe children have seen either?        
-      let ixMe = L.findIndex seenMe accums
-          ixSa = L.findIndex seenSa accums
-      in case (ixMe, ixSa) of
-         (Nothing, Nothing)     -> Acc False False (-1)
-         (Nothing, Just idx2)   -> Acc False True  (1 + dist (accums!! idx2))
-         (Just idx1, Nothing)   -> Acc True  False (1 + dist (accums!! idx1))
-         (Just idx1, Just idx2) -> -- Both have been seen!
-             if idx1 == idx2  -- in the same child tree
-             then Acc True True ( dist (accums!! idx1))
-             else Acc True True ((dist (accums!! idx1)) + (dist (accums!! idx2)))
+meAndSanta (NodeF name accums) 
+  | name == "YOU" || name == "SAN"
+  = if name == "YOU"
+    then if hasSanta accums
+         then Acc True  True (distToSa accums)
+         else Acc True  False 0
+    else if hasMe accums
+         then Acc True  True (distToMe accums)
+         else Acc False True 0      
   where hasMe    = or . fmap seenMe
         hasSanta = or . fmap seenSa
         distToMe = dist . fromJust . find seenMe
         distToSa = dist . fromJust . find seenSa
+        
+meAndSanta (NodeF name accums) = -- neither YOU nor SANTA
+  case (ixMe, ixSa) of
+     (Nothing, Nothing)     -> Acc False False (-1)
+     (Nothing, Just idx2)   -> Acc False True  (1 + dist (accums!! idx2))
+     (Just idx1, Nothing)   -> Acc True  False (1 + dist (accums!! idx1))
+     (Just idx1, Just idx2) -> -- Both have been seen!
+         if idx1 == idx2  -- in the same child tree
+         then Acc True True ( dist (accums!! idx1))
+         else Acc True True ((dist (accums!! idx1)) + (dist (accums!! idx2)))
+  where ixMe = L.findIndex seenMe accums
+        ixSa = L.findIndex seenSa accums
 
---meetSanta pool = dist $ hylo meAndSanta mkNode ("COM", pool)
 meetSanta = dist . hylo meAndSanta mkNode . ("COM", )
 
 -- for testing only
