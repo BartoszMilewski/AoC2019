@@ -32,43 +32,39 @@ put :: Addr -> Int -> Prog -> Prog
 put p v prog = M.insert p v prog
 
 mkProgram :: [Int] -> Prog
-mkProgram listing = 
-  let addressSpace = fmap A [0..]
-  in M.fromList (zip addressSpace listing)
+mkProgram listing = M.fromList (zip addressSpace listing)
+  where addressSpace = fmap A [0..]
   
 run :: Prog -> (Int, Int) -> Int
-run prog (noun, verb) = 
-  let prog1 = put (A 1) noun prog
-      prog2 = put (A 2) verb prog1
-  in runProg (A 0) prog2
-  
+run prog (noun, verb) = runProg (A 0) prog2
+  where prog1 = put (A 1) noun prog
+        prog2 = put (A 2) verb prog1
+
 runProg :: Addr -> Prog -> Int
 runProg ip prog = 
    let opCode = get ip prog
    in if opCode == 99 
       then get (A 0) prog -- we're done!
       else 
-        let p1 = getP ip 1 prog
-            p2 = getP ip 2 prog
-            pr = getP ip 3 prog
-        in runProg (addP ip 4) (exec opCode p1 p2 pr prog)
+        runProg (addP ip 4) (exec opCode p1 p2 pr prog)
+  where p1 = getP ip 1 prog
+        p2 = getP ip 2 prog
+        pr = getP ip 3 prog
       
 exec :: Int -> Addr -> Addr -> Addr -> Prog -> Prog
-exec op p1 p2 pr prog =
-  let m = get p1 prog
-      n = get p2 prog
-      val = if op == 1 
-            then m + n 
-            else m * n
-  in put pr val prog
-  
+exec op p1 p2 pr prog = put pr val prog
+  where val = if op == 1 
+              then m + n 
+              else m * n
+        m = get p1 prog
+        n = get p2 prog
+ 
 makeOutput :: Int -> Prog -> Int
-makeOutput out prog = 
-   let pairs = (,) <$> [0..99] <*> [0..99]
+makeOutput out prog = 100 * noun + verb 
+ where pairs = (,) <$> [0..99] <*> [0..99]
        outputs = zip (fmap (run prog) pairs) pairs
        (noun, verb) = fromJust $ Prelude.lookup out outputs
-   in 100 * noun + verb 
-  
+ 
 main = do
   text <- readFile "Data2.txt"
   let listing = fmap readInt $ splitOn "," text
