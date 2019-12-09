@@ -20,9 +20,8 @@ hasDouble :: [Int] -> Bool
 hasDouble lst = any (\(a, b) -> a == b) $ zip lst (tail lst) 
 
 isGood :: Int -> Bool
-isGood n = 
-  let ds = digitsR n
-  in isNonIncr ds && hasDouble ds
+isGood n = isNonIncr ds && hasDouble ds
+  where ds = digitsR n
   
 -- fromEnum turns False to 0 and True to 1
 countPasswds :: Int -> Int -> Int
