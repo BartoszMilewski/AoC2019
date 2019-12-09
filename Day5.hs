@@ -4,6 +4,9 @@ import Data.List.Split
 import Data.Maybe
 import Data.Map as M
 import Control.Applicative
+import Control.Monad
+import Data.Either
+
 
 readInt :: String -> Int
 readInt s = read s
@@ -20,26 +23,25 @@ type Prog = M.Map Addr Int
 
 getV :: Prog -> Addr -> Int
 getV prog p = 
-  case M.lookup p prog of
-    Just x -> x
-    Nothing -> error $ show p
+  fromJust $ M.lookup p prog 
 
 getP :: Prog -> Addr -> Int -> Addr
-getP prog p off = A $ fromJust $ M.lookup (addP p off) prog
+getP prog p off = A $ fromJust $ 
+    M.lookup (addP p off) prog
 
 putV :: Prog -> Addr -> Int -> Prog
 putV prog p v = M.insert p v prog
 
 mkProgram :: [Int] -> Prog
 mkProgram listing = 
-  let addressSpace = fmap A [0..]
-  in M.fromList (zip addressSpace listing)
-  
+   M.fromList $ zip addressSpace listing
+ where addressSpace = fmap A [0..]
+ 
 data Op = Plus | Times | In | Out | JumpT | JumpF | IsLess | IsEq | Stop
   deriving (Eq, Enum, Show)
   
 data Mode = Ref | Imm 
-  deriving (Eq, Enum, Show)
+  deriving (Enum, Show)
   
 -- Could use the state monad, but it's an overkill
 
@@ -71,10 +73,8 @@ decode n =
       IsEq  -> ([1, 2], [3])
       Stop  -> ([],     [])
     opCode :: Int -> Op
-    opCode x = 
-      if x == 99 
-      then Stop
-      else toEnum $ x `mod` 100 - 1
+    opCode 99 = Stop
+    opCode x = toEnum $ x `mod` 100 - 1
     modes :: Int -> [Mode]
     modes x = fmap digitToMode [ x `div` 100
                                , x `div` 1000
@@ -83,7 +83,7 @@ decode n =
     digitToMode = toEnum . fromEnum . odd
    
 -- First argument is external input
-exec :: Int -> Computer -> Maybe Computer
+exec :: Int -> Computer -> Either [Int] Computer
 exec i (Comp o ip prog) =
     let (opCode, modes, inOffs, outOffs) = decode $ getV prog ip
         ins  = fmap (getP prog ip) inOffs
@@ -93,9 +93,8 @@ exec i (Comp o ip prog) =
         -- If no jump, increment IP
         newIp = fromMaybe (addP ip (length inOffs + length outOffs + 1)) mip
     in if opCode == Stop 
-       then Nothing 
-       else
-         Just (Comp o' newIp prog')
+       then Left o 
+       else Right (Comp o' newIp prog')
   where 
     -- takes opcode, values of inputs, and addresses of outputs (zero or one)
     -- returns new external output list, maybe new IP (if jump), and new program
@@ -129,18 +128,16 @@ exec i (Comp o ip prog) =
                  , putV prog (head outs) 
                               (if args!!0 == args!!1 then 1 else 0))
     getM :: (Mode, Addr) -> Int
-    getM (m, p) = 
-        if m == Ref 
-        then getV prog p
-        else asValue p
+    getM (Ref, p) = getV prog p
+    getM (Imm, p) = asValue p
 
--- takes input, returns list of outputs
+-- iterate a Kleisli arrow
+iterateM_ :: Monad m => (a -> m a) -> a -> m b
+iterateM_ f = g
+    where g = f >=> g
+
 run :: Prog -> Int -> [Int]
-run prog i = go (mkComputer prog)
-  where go comp = case exec i comp of
-                    Nothing -> output comp
-                    Just comp' -> go comp'
-
+run prog i = fromLeft [] $ iterateM_ (exec i) (mkComputer prog)
 
 main = do
   text <- readFile "Data5.txt"
