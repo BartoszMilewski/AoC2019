@@ -51,9 +51,7 @@ addSeg seg (Segs vert hor) =
 -- cumulative vertical and horizontal segment lists
 move :: (Pos, Steps, Segments) -> Move -> (Pos, Steps, Segments)
 move ((x, y), steps, segs) (M dir dist) =
-   let steps' = steps + dist
-       seg' = S min max other dir steps
-   in (pos', steps', addSeg seg' segs)
+   (pos', steps', addSeg seg' segs)
  where 
    (pos', min, max, other) =
      case dir of
@@ -61,6 +59,8 @@ move ((x, y), steps, segs) (M dir dist) =
       'D' -> ((x, y - dist), (y - dist), y, x)
       'L' -> ((x - dist, y), (x - dist), x, y)
       'R' -> ((x + dist, y), x, (x + dist), y)
+   steps' = steps + dist
+   seg' = S min max other dir steps
     
 -- In: vertical segment, horizontal segment
 -- Out: if they cross, position and grid steps to crossing
@@ -79,13 +79,11 @@ cross (vert, hor) =
                'U' -> sOth hor - sMin vert
                _   -> error "Bad cross"
   
-  
 -- In: vertical segments, horizontal segments
 -- Out: list of positions and steps to crossing
 crosses :: [Seg] -> [Seg] -> [(Pos, Steps)]
-crosses vs hs = 
-  let pairs = (,) <$> vs <*> hs
-  in catMaybes $ fmap cross pairs
+crosses vs hs = catMaybes $ fmap cross pairs
+  where pairs = (,) <$> vs <*> hs
 
 manhDist :: Pos -> Int
 manhDist (x, y) = abs x + abs y
